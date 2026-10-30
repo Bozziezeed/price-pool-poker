@@ -1,4 +1,4 @@
-# PEACH CLUB POKER
+# PEACE CLUB POKER
 
 คำนวณเงินรางวัลโป๊กเกอร์สำหรับเกมในบ้าน — Next.js, ไม่มีฐานข้อมูล
 

@@ -22,7 +22,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <header className="border-b border-zinc-200 bg-emerald-800 text-white dark:border-zinc-800">
           <nav className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3 text-sm">
             <Link href="/" className="mr-auto text-base font-bold">
-              ♠ PEACH CLUB POKER
+              ♠ PEACE CLUB POKER
             </Link>
             <Link href="/tournament?type=normal" className="hover:underline">
               ทัวร์
