@@ -2,13 +2,16 @@ import { nonNeg, round2 } from "./format";
 
 export type TourType = "normal" | "bounty";
 
+export type OperationItem = { id: string; label: string; amount: number };
+
 export type TourSettings = {
   buyIn: number;
   rebuy: number;
   addOnEnabled: boolean;
   addOn: number;
   bounty: number; // per entry, bounty tournaments only
-  operationCost: number; // fixed ฿ per tournament
+  operationItems?: OperationItem[]; // fixed ฿ costs per tournament; read through operationItemsOf
+  operationCost?: number; // legacy single amount, still in old saves and share links
   bubble: number; // fixed ฿ for the first place out of the money; 0 = none
   roundTo: number; // round each prize down to this unit
 };
@@ -19,6 +22,7 @@ export type TourPlayer = {
   rebuys: number;
   addOns: number;
   bustedAt: number | null; // bust order; null = still playing
+  settled?: boolean; // balance cleared; a bookkeeping tick, doesn't affect the numbers
 };
 
 // One per bust. A re-buy keeps the knockout, so the bounty stays earned.
@@ -57,7 +61,8 @@ export type TourResult = {
   totalPaid: number;
   bountyPool: number;
   prizeGross: number;
-  operationCost: number;
+  operationCost: number; // total of the items, capped at the prize pool
+  operationItems: OperationItem[]; // only the items with an amount
   bubble: Prize | null; // percent is 0; amount is the fixed bubble prize
   netPool: number; // what the payout percentages split (after bubble)
   percentSum: number;
@@ -72,10 +77,13 @@ export const defaultTourSettings: TourSettings = {
   addOnEnabled: false,
   addOn: 500,
   bounty: 100,
-  operationCost: 0,
+  operationItems: [],
   bubble: 0,
   roundTo: 10,
 };
+
+export const operationItemsOf = (s: TourSettings): OperationItem[] =>
+  s.operationItems ?? (s.operationCost ? [{ id: "legacy", label: "", amount: s.operationCost }] : []);
 
 // Suggested payout structure based on field size.
 export function suggestPayouts(playerCount: number): number[] {
@@ -106,7 +114,11 @@ export function calculateTournament(t: Tournament): TourResult {
 
   const bountyPool = totalEntries * bounty;
   const prizeGross = Math.max(totalPaid - bountyPool, 0);
-  const operationCost = Math.min(nonNeg(s.operationCost), prizeGross);
+  const operationItems = operationItemsOf(s).filter((item) => nonNeg(item.amount) > 0);
+  const operationCost = Math.min(
+    operationItems.reduce((acc, item) => acc + item.amount, 0),
+    prizeGross,
+  );
 
   // The bubble (first place out of the money) gets a fixed amount off the top,
   // as long as there is someone in that place.
@@ -183,6 +195,7 @@ export function calculateTournament(t: Tournament): TourResult {
     bountyPool,
     prizeGross,
     operationCost,
+    operationItems,
     bubble,
     netPool,
     percentSum,

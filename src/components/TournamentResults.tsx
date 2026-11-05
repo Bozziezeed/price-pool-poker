@@ -5,6 +5,7 @@ import { Card, plColor, SummaryRow } from "./ui";
 export function PoolSummary({ t, r }: { t: Tournament; r: TourResult }) {
   const s = t.settings;
   const bounty = t.type === "bounty";
+  const labelled = r.operationItems.some((item) => item.label.trim());
   return (
     <Card title="สรุปเงินรางวัล">
       <dl>
@@ -22,6 +23,15 @@ export function PoolSummary({ t, r }: { t: Tournament; r: TourResult }) {
           />
         )}
         <SummaryRow label="ค่าดำเนินการ" value={`−${baht(r.operationCost)}`} className="text-red-600" />
+        {labelled &&
+          r.operationItems.map((item) => (
+            <SummaryRow
+              key={item.id}
+              label={item.label.trim() || "ไม่ระบุ"}
+              value={baht(item.amount)}
+              className="pl-3 text-zinc-400"
+            />
+          ))}
         {r.bubble && (
           <SummaryRow
             label={`บับเบิล (อันดับ ${r.bubble.place})`}

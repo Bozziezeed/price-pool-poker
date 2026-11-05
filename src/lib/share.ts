@@ -1,6 +1,5 @@
-import { calculateCash, type CashGame } from "./cash";
-import { baht, signedBaht } from "./format";
-import { byPlace, calculateTournament, type Tournament } from "./tournament";
+import type { CashGame } from "./cash";
+import type { Tournament } from "./tournament";
 
 export type SharePayload =
   | { k: "t"; d: Tournament }
@@ -28,57 +27,5 @@ export async function decodeShare(data: string): Promise<SharePayload> {
   return JSON.parse(new TextDecoder().decode(json));
 }
 
-const medal = (place: number) => ["🥇", "🥈", "🥉"][place - 1] ?? "▫️";
-
 export const tourTitle = (t: Tournament) =>
   t.type === "bounty" ? "ทัวร์นาเมนต์ Bounty" : "ทัวร์นาเมนต์";
-
-// Plain-text summary for pasting into LINE.
-export function tournamentText(t: Tournament): string {
-  const r = calculateTournament(t);
-  const bounty = t.type === "bounty";
-  const lines = [
-    `🏆 ${tourTitle(t)} (${t.players.length} คน)`,
-    `เงินรางวัลสุทธิ ${baht(r.netPool)}`,
-    `(ยอดรวม ${baht(r.totalPaid)}${bounty ? ` · บาวน์ตี้ ${baht(r.bountyPool)}` : ""} · ค่าดำเนินการ ${baht(r.operationCost)})`,
-    "",
-    "— เงินรางวัล —",
-    ...r.prizes.map((p) => {
-      const who = r.rows.find((row) => row.place === p.place);
-      return `${medal(p.place)} ${p.place}. ${who?.name ?? "-"}  ${baht(p.amount)}`;
-    }),
-  ];
-  if (r.bubble) {
-    const who = r.rows.find((row) => row.place === r.bubble!.place);
-    lines.push(`🫧 ${r.bubble.place}. ${who?.name ?? "-"}  ${baht(r.bubble.amount)} (บับเบิล)`);
-  }
-  if (bounty) {
-    lines.push("", "— บาวน์ตี้ —");
-    for (const row of [...r.rows].sort((a, b) => b.bountyWon - a.bountyWon)) {
-      if (row.bountyWon > 0) lines.push(`${row.name}  ${row.knockouts} น็อค  ${baht(row.bountyWon)}`);
-    }
-  }
-  lines.push("", "— สุทธิ —");
-  for (const row of [...r.rows].sort(byPlace)) {
-    lines.push(`${row.place ?? "-"}. ${row.name}  ${signedBaht(row.net)}`);
-  }
-  return lines.join("\n");
-}
-
-export function cashText(g: CashGame): string {
-  const r = calculateCash(g);
-  const lines = [
-    `💵 แคชเกม (${g.players.length} คน)`,
-    `บายอินรวม ${baht(r.totalIn)} · ค่าดำเนินการ ${baht(r.operationCost)}`,
-    "",
-    "— ได้/เสีย —",
-    ...[...r.rows]
-      .sort((a, b) => (b.pl ?? 0) - (a.pl ?? 0))
-      .map((row) => `${row.name}  ${row.pl === null ? "ยังไม่แคชเอาท์" : signedBaht(row.pl)}`),
-  ];
-  if (r.transfers.length > 0) {
-    lines.push("", "— การโอน —");
-    for (const tr of r.transfers) lines.push(`${tr.from} → ${tr.to}  ${baht(tr.amount)}`);
-  }
-  return lines.join("\n");
-}

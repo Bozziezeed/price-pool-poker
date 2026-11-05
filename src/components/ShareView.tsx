@@ -32,7 +32,7 @@ export default function ShareView({ data }: { data: string }) {
   return (
     <div className="mx-auto max-w-4xl space-y-4 py-3">
       <p className="rounded-lg bg-zinc-100 px-3 py-2 text-sm text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400">
-        👀 ผลที่แชร์มา (ดูอย่างเดียว)
+        👀 ผลสรุป (ดูอย่างเดียว)
       </p>
       {payload.k === "t" ? (
         <TourShare t={payload.d} />

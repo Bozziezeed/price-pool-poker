@@ -3,9 +3,8 @@
 import { useMemo, useState } from "react";
 import { calculateCash, type CashGame, type CashPlayer, type CashRow } from "@/lib/cash";
 import { baht, shortId, signedBaht } from "@/lib/format";
-import { cashText } from "@/lib/share";
 import { CashSummary, Transfers } from "./CashResults";
-import { ShareBar } from "./ShareBar";
+import { OpenResults } from "./OpenResults";
 import { btn, Card, ConfirmButton, Counter, inputCls, NumberField, plColor, usePersistentState } from "./ui";
 
 type CashState = CashGame & { defaultBuyIn: number };
@@ -29,11 +28,11 @@ export default function CashApp() {
     setNewName("");
   };
 
-  // Keep player names and settings; clear buy-ins and cash-outs.
+  // Keep player names and settings; clear buy-ins, cash-outs and settled ticks.
   const newGame = () =>
     setG((x) => ({
       ...x,
-      players: x.players.map((p) => ({ ...p, buyIns: [x.defaultBuyIn], cashOut: null })),
+      players: x.players.map((p) => ({ ...p, buyIns: [x.defaultBuyIn], cashOut: null, settled: false })),
     }));
 
   const shared: CashGame = { operationCost: g.operationCost, players: g.players };
@@ -80,7 +79,7 @@ export default function CashApp() {
               <p className="py-10 text-center text-sm text-zinc-500">ยังไม่มีผู้เล่น</p>
             ) : (
               // Fixed column widths so the table doesn't shift as numbers change.
-              <table className="w-full min-w-[560px] table-fixed text-sm">
+              <table className="w-full min-w-[660px] table-fixed text-sm">
                 <colgroup>
                   <col />
                   <col className="w-[104px]" />
@@ -88,6 +87,7 @@ export default function CashApp() {
                   <col className="w-[88px]" />
                   <col className="w-[124px]" />
                   <col className="w-[92px]" />
+                  <col className="w-[60px]" />
                   <col className="w-[28px]" />
                 </colgroup>
                 <thead className="sticky top-0 z-10 whitespace-nowrap bg-white text-left text-xs text-zinc-500 dark:bg-zinc-950">
@@ -98,6 +98,7 @@ export default function CashApp() {
                     <th className="py-1.5 pl-3 text-right">รวมบายอิน</th>
                     <th className="py-1.5 pl-3">แคชเอาท์</th>
                     <th className="py-1.5 pl-3 text-right">ได้/เสีย</th>
+                    <th className="py-1.5 pl-3 text-center">เคลียร์</th>
                     <th />
                   </tr>
                 </thead>
@@ -146,7 +147,7 @@ export default function CashApp() {
           <CashSummary r={r} />
 
           {g.players.length > 0 && (
-            <Card title={r.balanced ? "🏁 สรุปการโอน" : "แชร์ผล"}>
+            <Card title={r.balanced ? "🏁 สรุปการโอน" : "ผลสรุป"}>
               {r.balanced ? (
                 <div className="-mt-4">
                   <Transfers r={r} />
@@ -154,7 +155,7 @@ export default function CashApp() {
               ) : (
                 <p className="text-sm text-zinc-500">การโอนจะแสดงเมื่อแคชเอาท์ครบและยอดตรงกัน</p>
               )}
-              <ShareBar payload={{ k: "c", d: shared }} text={cashText(shared)} />
+              <OpenResults payload={{ k: "c", d: shared }} />
             </Card>
           )}
         </aside>
@@ -235,6 +236,15 @@ function CashPlayerRow({
       </td>
       <td className={`py-1 pl-3 text-right font-mono font-semibold ${row.pl === null ? "text-zinc-400" : plColor(row.pl)}`}>
         {row.pl === null ? "-" : signedBaht(row.pl)}
+      </td>
+      <td className="py-1 pl-3 text-center">
+        <input
+          type="checkbox"
+          className="h-4 w-4 align-middle accent-emerald-600"
+          aria-label={`เคลียร์ยอด ${p.name}`}
+          checked={p.settled ?? false}
+          onChange={(e) => onChange({ settled: e.target.checked })}
+        />
       </td>
       <td className="py-1 pl-1 text-right">
         <button className="px-1 text-zinc-400 hover:text-red-600" aria-label={`ลบ ${p.name}`} onClick={onRemove}>
