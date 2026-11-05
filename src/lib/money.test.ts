@@ -7,6 +7,7 @@ import {
   defaultTourSettings,
   rebuyPlayer,
   undoBust,
+  type OperationItem,
   type Tournament,
 } from "./tournament";
 
@@ -15,7 +16,7 @@ const player = (id: string) => ({ id, name: id, rebuys: 0, addOns: 0, bustedAt: 
 describe("bounty tournament", () => {
   let t: Tournament = {
     type: "bounty",
-    settings: { ...defaultTourSettings, buyIn: 500, rebuy: 500, bounty: 100, operationCost: 200, roundTo: 10 },
+    settings: { ...defaultTourSettings, buyIn: 500, rebuy: 500, bounty: 100, operationItems: [{ id: "x", label: "", amount: 200 }], roundTo: 10 },
     players: ["A", "B", "C", "D"].map(player),
     payouts: [65, 35],
     knockouts: [],
@@ -70,6 +71,41 @@ describe("normal tournament", () => {
   });
 });
 
+describe("operation cost items", () => {
+  const withItems = (operationItems: OperationItem[] | undefined, operationCost?: number): Tournament => ({
+    type: "normal",
+    settings: { ...defaultTourSettings, buyIn: 500, operationItems, operationCost },
+    players: ["A", "B"].map(player),
+    payouts: [100],
+    knockouts: [],
+  });
+  const house = { id: "1", label: " ค่าบ้าน ", amount: 300 };
+  const food = { id: "2", label: "ค่าอาหาร", amount: 150 };
+
+  it("adds every item to the cost, ignoring blank amounts", () => {
+    const r = calculateTournament(withItems([house, food, { id: "3", label: "ยังไม่กรอก", amount: NaN }]));
+    expect(r.operationCost).toBe(450);
+    expect(r.netPool).toBe(550);
+    expect(r.operationItems.map((item) => item.id)).toEqual(["1", "2"]);
+  });
+
+  it("ignores an amount cleared and restored from a save as null", () => {
+    const saved = { id: "1", label: "", amount: null as unknown as number };
+    expect(calculateTournament(withItems([saved, food])).operationCost).toBe(150);
+  });
+
+  it("never takes more than the prize pool", () => {
+    const r = calculateTournament(withItems([{ id: "1", label: "", amount: 5000 }]));
+    expect(r.operationCost).toBe(1000);
+    expect(r.netPool).toBe(0);
+  });
+
+  it("reads the single amount from old saves and share links", () => {
+    expect(calculateTournament(withItems(undefined, 200)).operationCost).toBe(200);
+    expect(calculateTournament(withItems([], 200)).operationCost).toBe(0);
+  });
+});
+
 describe("cash game", () => {
   const game = {
     operationCost: 200,
@@ -108,7 +144,7 @@ describe("cash game", () => {
 describe("bubble", () => {
   const base: Tournament = {
     type: "normal",
-    settings: { ...defaultTourSettings, buyIn: 500, operationCost: 0, bubble: 500, roundTo: 10 },
+    settings: { ...defaultTourSettings, buyIn: 500, bubble: 500, roundTo: 10 },
     players: ["A", "B", "C", "D", "E"].map(player),
     payouts: [60, 40],
     knockouts: [],

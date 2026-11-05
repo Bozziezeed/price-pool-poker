@@ -5,6 +5,7 @@ export type CashPlayer = {
   name: string;
   buyIns: number[]; // each buy-in amount; can differ
   cashOut: number | null; // null = not cashed out yet
+  settled?: boolean; // balance cleared; a bookkeeping tick, doesn't affect the numbers
 };
 
 export type CashGame = {

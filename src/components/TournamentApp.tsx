@@ -2,22 +2,24 @@
 
 import { Fragment, useMemo, useState } from "react";
 import { baht, shortId, signedBaht } from "@/lib/format";
-import { tournamentText, tourTitle } from "@/lib/share";
+import { tourTitle } from "@/lib/share";
 import {
   bustPlayer,
   byPlace,
   calculateTournament,
   defaultTourSettings,
+  operationItemsOf,
   rebuyPlayer,
   removePlayer,
   suggestPayouts,
   undoBust,
+  type OperationItem,
   type TourPlayer,
   type TourSettings,
   type TourType,
   type Tournament,
 } from "@/lib/tournament";
-import { ShareBar } from "./ShareBar";
+import { OpenResults } from "./OpenResults";
 import { PoolSummary } from "./TournamentResults";
 import { btn, Card, ConfirmButton, Counter, inputCls, NumberField, plColor, usePersistentState } from "./ui";
 
@@ -37,11 +39,15 @@ export default function TournamentApp({ type }: { type: TourType }) {
   const r = useMemo(() => calculateTournament(t), [t]);
   const isBounty = type === "bounty";
   const s = t.settings;
+  const opItems = operationItemsOf(s);
 
   const setSetting = <K extends keyof TourSettings>(key: K, value: TourSettings[K]) =>
     setT((x) => ({ ...x, settings: { ...x.settings, [key]: value } }));
   const setPlayer = (id: string, patch: Partial<TourPlayer>) =>
     setT((x) => ({ ...x, players: x.players.map((p) => (p.id === id ? { ...p, ...patch } : p)) }));
+
+  const setOpItem = (id: string, patch: Partial<OperationItem>) =>
+    setSetting("operationItems", opItems.map((item) => (item.id === id ? { ...item, ...patch } : item)));
 
   const addPlayer = () => {
     const name = newName.trim() || `ผู้เล่น ${t.players.length + 1}`;
@@ -61,7 +67,7 @@ export default function TournamentApp({ type }: { type: TourType }) {
   const newGame = () => {
     setT((x) => ({
       ...x,
-      players: x.players.map((p) => ({ ...p, rebuys: 0, addOns: 0, bustedAt: null })),
+      players: x.players.map((p) => ({ ...p, rebuys: 0, addOns: 0, bustedAt: null, settled: false })),
       knockouts: [],
     }));
     setBustingId(null);
@@ -72,7 +78,7 @@ export default function TournamentApp({ type }: { type: TourType }) {
   // Players still in stay on top (in entry order), busted ones below by place.
   const rows = [...r.rows].sort(byPlace);
   const percentOk = r.percentSum === 100;
-  const colCount = 8 + (s.addOnEnabled ? 1 : 0) + (isBounty ? 1 : 0);
+  const colCount = 9 + (s.addOnEnabled ? 1 : 0) + (isBounty ? 1 : 0);
 
   return (
     // On tablet landscape and up the page fits one screen; each column scrolls on its own.
@@ -119,7 +125,7 @@ export default function TournamentApp({ type }: { type: TourType }) {
               <p className="py-10 text-center text-sm text-zinc-500">ยังไม่มีผู้เล่น</p>
             ) : (
               // Fixed column widths so the table doesn't shift as numbers change.
-              <table className="w-full min-w-[560px] table-fixed text-sm">
+              <table className="w-full min-w-[620px] table-fixed text-sm">
                 <colgroup>
                   <col className="w-[52px]" />
                   <col />
@@ -129,6 +135,7 @@ export default function TournamentApp({ type }: { type: TourType }) {
                   <col className="w-[80px]" />
                   {isBounty && <col className="w-[96px]" />}
                   <col className="w-[84px]" />
+                  <col className="w-[60px]" />
                   <col className="w-[76px]" />
                   <col className="w-[28px]" />
                 </colgroup>
@@ -142,6 +149,7 @@ export default function TournamentApp({ type }: { type: TourType }) {
                     <th className="py-1.5 pl-3 text-right">รางวัล</th>
                     {isBounty && <th className="py-1.5 pl-3 text-right">บาวน์ตี้</th>}
                     <th className="py-1.5 pl-3 text-right">สุทธิ</th>
+                    <th className="py-1.5 pl-3 text-center">เคลียร์</th>
                     <th />
                     <th />
                   </tr>
@@ -203,6 +211,15 @@ export default function TournamentApp({ type }: { type: TourType }) {
                           )}
                           <td className={`py-1 pl-3 text-right font-mono font-semibold ${plColor(row.net)}`}>
                             {signedBaht(row.net)}
+                          </td>
+                          <td className="py-1 pl-3 text-center">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 align-middle accent-emerald-600"
+                              aria-label={`เคลียร์ยอด ${p.name}`}
+                              checked={p.settled ?? false}
+                              onChange={(e) => setPlayer(p.id, { settled: e.target.checked })}
+                            />
                           </td>
                           <td className="py-1 pl-2 text-right">
                             {out ? (
@@ -268,7 +285,7 @@ export default function TournamentApp({ type }: { type: TourType }) {
               <span className="font-semibold">⚙️ ตั้งค่า</span>
               <span className="ml-2 text-zinc-500 group-open:hidden">
                 บายอิน {baht(s.buyIn || 0)} · รีบาย {baht(s.rebuy || 0)}
-                {isBounty && ` · บาวน์ตี้ ${baht(s.bounty || 0)}`} · ค่าดำเนินการ {baht(s.operationCost || 0)}
+                {isBounty && ` · บาวน์ตี้ ${baht(s.bounty || 0)}`} · ค่าดำเนินการ {baht(r.operationCost)}
                 {s.bubble > 0 && ` · บับเบิล ${baht(s.bubble)}`}
               </span>
             </summary>
@@ -278,12 +295,9 @@ export default function TournamentApp({ type }: { type: TourType }) {
               {isBounty && (
                 <NumberField label="บาวน์ตี้ต่อเอนทรี" value={s.bounty} onChange={(v) => setSetting("bounty", v)} />
               )}
-              <NumberField
-                label="ค่าดำเนินการ (฿)"
-                value={s.operationCost}
-                onChange={(v) => setSetting("operationCost", v)}
-              />
-              <NumberField label="ค่าบับเบิล (฿)" value={s.bubble ?? 0} onChange={(v) => setSetting("bubble", v)} />
+              <div className={isBounty ? "" : "col-span-2"}>
+                <NumberField label="ค่าบับเบิล (฿)" value={s.bubble ?? 0} onChange={(v) => setSetting("bubble", v)} />
+              </div>
               <div>
                 <label className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
                   <input
@@ -319,6 +333,55 @@ export default function TournamentApp({ type }: { type: TourType }) {
                   ))}
                 </select>
               </label>
+              <div className="col-span-2 text-sm">
+                <div className="flex items-center justify-between text-zinc-600 dark:text-zinc-400">
+                  <span>ค่าดำเนินการ</span>
+                  {opItems.length > 0 && <span className="font-mono tabular-nums">รวม {baht(r.operationCost)}</span>}
+                </div>
+                <ul className="mt-1 space-y-1.5">
+                  {opItems.map((item) => (
+                    <li key={item.id} className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        aria-label="รายการค่าดำเนินการ"
+                        placeholder="รายการ เช่น ค่าบ้าน"
+                        className={`${inputCls} min-w-0 flex-1`}
+                        value={item.label}
+                        onChange={(e) => setOpItem(item.id, { label: e.target.value })}
+                      />
+                      <div className="w-24 shrink-0">
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          min={0}
+                          aria-label={`จำนวนเงิน ${item.label}`}
+                          placeholder="จำนวน"
+                          className={inputCls}
+                          value={Number.isFinite(item.amount) ? item.amount : ""}
+                          onChange={(e) => setOpItem(item.id, { amount: e.target.valueAsNumber })}
+                        />
+                      </div>
+                      <button
+                        className="px-1 text-zinc-400 hover:text-red-600"
+                        aria-label={`ลบ ${item.label || "รายการ"}`}
+                        onClick={() =>
+                          setSetting("operationItems", opItems.filter((x) => x.id !== item.id))
+                        }
+                      >
+                        ✕
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  className="mt-1.5 text-emerald-600 hover:underline"
+                  onClick={() =>
+                    setSetting("operationItems", [...opItems, { id: shortId(), label: "", amount: NaN }])
+                  }
+                >
+                  + เพิ่มรายการ
+                </button>
+              </div>
             </div>
             {isBounty && s.bounty > Math.min(s.buyIn || 0, s.rebuy || 0) && (
               <p className="mt-2 text-sm text-red-600">ค่าบาวน์ตี้มากกว่าค่าบายอิน/รีบาย</p>
@@ -399,8 +462,8 @@ export default function TournamentApp({ type }: { type: TourType }) {
           </Card>
 
           {t.players.length > 0 && (
-            <Card title={r.finished ? "🏁 จบเกมแล้ว" : "แชร์ผล"}>
-              <ShareBar payload={{ k: "t", d: t }} text={tournamentText(t)} />
+            <Card title={r.finished ? "🏁 จบเกมแล้ว" : "ผลสรุป"}>
+              <OpenResults payload={{ k: "t", d: t }} />
             </Card>
           )}
         </aside>
