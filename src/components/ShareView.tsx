@@ -30,7 +30,7 @@ export default function ShareView({ data }: { data: string }) {
   if (!payload) return <p className="py-16 text-center text-zinc-500">กำลังโหลด…</p>;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4 py-3">
+    <div className={`mx-auto space-y-4 py-3 ${payload.k === "t" ? "max-w-6xl" : "max-w-4xl"}`}>
       <p className="rounded-lg bg-zinc-100 px-3 py-2 text-sm text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400">
         👀 ผลสรุป (ดูอย่างเดียว)
       </p>
@@ -57,10 +57,14 @@ function TourShare({ t }: { t: Tournament }) {
         {t.type === "bounty" ? "🎯 " : "🏆 "}
         {tourTitle(t)}
       </h1>
-      <Card title={r.finished ? "🏁 ผลการแข่งขัน" : "ผลการแข่งขัน (ระหว่างเล่น)"}>
-        <ResultsTable t={t} r={r} />
-      </Card>
-      <PoolSummary t={t} r={r} />
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <Card title={r.finished ? "🏁 ผลการแข่งขัน" : "ผลการแข่งขัน (ระหว่างเล่น)"}>
+          <ResultsTable t={t} r={r} />
+        </Card>
+        <div className="lg:sticky lg:top-4">
+          <PoolSummary t={t} r={r} />
+        </div>
+      </div>
     </>
   );
 }

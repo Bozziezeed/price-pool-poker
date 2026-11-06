@@ -70,8 +70,9 @@ export function ResultsTable({ t, r }: { t: Tournament; r: TourResult }) {
         <tbody className="tabular-nums">
           {rows.map((row) => (
             <tr key={row.id} className="border-t border-zinc-100 dark:border-zinc-800">
-              <td className="py-2 font-medium">
+              <td className="whitespace-nowrap py-2 font-medium">
                 {row.place ?? <span className="text-xs text-emerald-600">เล่นอยู่</span>}
+                {row.place === 1 && <Crown className="ml-1" />}
               </td>
               <td className="py-2">{row.name}</td>
               <td className="py-2 text-center font-mono">
@@ -94,5 +95,13 @@ export function ResultsTable({ t, r }: { t: Tournament; r: TourResult }) {
         </tbody>
       </table>
     </div>
+  );
+}
+
+export function Crown({ className = "" }: { className?: string }) {
+  return (
+    <span role="img" aria-label="แชมป์" title="แชมป์" className={`shrink-0 ${className}`}>
+      👑
+    </span>
   );
 }

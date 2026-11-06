@@ -20,7 +20,7 @@ import {
   type Tournament,
 } from "@/lib/tournament";
 import { OpenResults } from "./OpenResults";
-import { PoolSummary } from "./TournamentResults";
+import { Crown, PoolSummary } from "./TournamentResults";
 import { btn, Card, ConfirmButton, Counter, inputCls, NumberField, plColor, usePersistentState } from "./ui";
 
 const newTournament = (type: TourType): Tournament => ({
@@ -163,8 +163,9 @@ export default function TournamentApp({ type }: { type: TourType }) {
                         <tr className="border-t border-zinc-100 dark:border-zinc-800">
                           <td className="py-1 pr-1">
                             {row.place !== null ? (
-                              <span className={`font-semibold ${row.prize > 0 ? "text-emerald-700 dark:text-emerald-400" : ""}`}>
+                              <span className={`whitespace-nowrap font-semibold ${row.prize > 0 ? "text-emerald-700 dark:text-emerald-400" : ""}`}>
                                 {row.place}
+                                {row.place === 1 && <Crown className="ml-1" />}
                               </span>
                             ) : (
                               <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-xs text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
