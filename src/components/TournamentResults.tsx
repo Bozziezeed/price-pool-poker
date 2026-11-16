@@ -27,7 +27,11 @@ export function PoolSummary({ t, r }: { t: Tournament; r: TourResult }) {
           r.operationItems.map((item) => (
             <SummaryRow
               key={item.id}
-              label={item.label.trim() || "ไม่ระบุ"}
+              label={
+                item.id === "electricity"
+                  ? `ค่าไฟ (${t.players.length} × ${baht(s.electricityPerPlayer ?? 0)})`
+                  : item.label.trim() || "ไม่ระบุ"
+              }
               value={baht(item.amount)}
               className="pl-3 text-zinc-400"
             />

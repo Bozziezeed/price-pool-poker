@@ -12,6 +12,8 @@ export type TourSettings = {
   bounty: number; // per entry, bounty tournaments only
   operationItems?: OperationItem[]; // fixed ฿ costs per tournament; read through operationItemsOf
   operationCost?: number; // legacy single amount, still in old saves and share links
+  electricityEnabled?: boolean; // ค่าไฟ: charged per player who bought in (re-buys don't count)
+  electricityPerPlayer?: number;
   bubble: number; // fixed ฿ for the first place out of the money; 0 = none
   roundTo: number; // round each prize down to this unit
 };
@@ -85,6 +87,10 @@ export const defaultTourSettings: TourSettings = {
 export const operationItemsOf = (s: TourSettings): OperationItem[] =>
   s.operationItems ?? (s.operationCost ? [{ id: "legacy", label: "", amount: s.operationCost }] : []);
 
+// ค่าไฟ: one charge per player who bought in; re-buys and add-ons don't count.
+export const electricityCost = (t: Tournament): number =>
+  t.settings.electricityEnabled ? t.players.length * nonNeg(t.settings.electricityPerPlayer ?? 0) : 0;
+
 // Suggested payout structure based on field size.
 export function suggestPayouts(playerCount: number): number[] {
   if (playerCount <= 3) return [100];
@@ -115,6 +121,8 @@ export function calculateTournament(t: Tournament): TourResult {
   const bountyPool = totalEntries * bounty;
   const prizeGross = Math.max(totalPaid - bountyPool, 0);
   const operationItems = operationItemsOf(s).filter((item) => nonNeg(item.amount) > 0);
+  const electricity = electricityCost(t);
+  if (electricity > 0) operationItems.push({ id: "electricity", label: "ค่าไฟ", amount: electricity });
   const operationCost = Math.min(
     operationItems.reduce((acc, item) => acc + item.amount, 0),
     prizeGross,

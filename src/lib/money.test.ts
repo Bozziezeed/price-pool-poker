@@ -106,6 +106,34 @@ describe("operation cost items", () => {
   });
 });
 
+describe("electricity cost", () => {
+  const withElectricity = (electricityEnabled: boolean, electricityPerPlayer: number): Tournament => ({
+    type: "normal",
+    settings: {
+      ...defaultTourSettings,
+      buyIn: 500,
+      rebuy: 500,
+      electricityEnabled,
+      electricityPerPlayer,
+      operationItems: [{ id: "1", label: "Dealer", amount: 300 }],
+    },
+    players: ["A", "B", "C"].map(player).map((p, i) => (i === 0 ? { ...p, rebuys: 2 } : p)),
+    payouts: [100],
+    knockouts: [],
+  });
+
+  it("charges per player who bought in, not per re-buy, and adds to the operation cost", () => {
+    const r = calculateTournament(withElectricity(true, 50));
+    expect(r.operationCost).toBe(300 + 3 * 50);
+    expect(r.operationItems.find((item) => item.id === "electricity")?.amount).toBe(150);
+  });
+
+  it("is ignored when unchecked or blank", () => {
+    expect(calculateTournament(withElectricity(false, 50)).operationCost).toBe(300);
+    expect(calculateTournament(withElectricity(true, NaN)).operationCost).toBe(300);
+  });
+});
+
 describe("cash game", () => {
   const game = {
     operationCost: 200,
