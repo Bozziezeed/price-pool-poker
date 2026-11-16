@@ -8,6 +8,7 @@ import {
   byPlace,
   calculateTournament,
   defaultTourSettings,
+  electricityCost,
   operationItemsOf,
   rebuyPlayer,
   removePlayer,
@@ -337,7 +338,41 @@ export default function TournamentApp({ type }: { type: TourType }) {
               <div className="col-span-2 text-sm">
                 <div className="flex items-center justify-between text-zinc-600 dark:text-zinc-400">
                   <span>ค่าดำเนินการ</span>
-                  {opItems.length > 0 && <span className="font-mono tabular-nums">รวม {baht(r.operationCost)}</span>}
+                  {r.operationItems.length > 0 && (
+                    <span className="font-mono tabular-nums">รวม {baht(r.operationCost)}</span>
+                  )}
+                </div>
+                <div className="mt-1 flex items-center gap-2">
+                  <label className="flex min-w-0 flex-1 items-center gap-2 text-zinc-600 dark:text-zinc-400">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 accent-emerald-600"
+                      checked={!!s.electricityEnabled}
+                      onChange={(e) => setSetting("electricityEnabled", e.target.checked)}
+                    />
+                    <span className="truncate">
+                      ค่าไฟ ต่อคน
+                      {s.electricityEnabled && (
+                        <span className="ml-1 font-mono text-xs tabular-nums text-zinc-400">
+                          ({t.players.length} คน = {baht(electricityCost(t))})
+                        </span>
+                      )}
+                    </span>
+                  </label>
+                  <div className="w-24 shrink-0">
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      disabled={!s.electricityEnabled}
+                      aria-label="ค่าไฟต่อคน"
+                      placeholder="ต่อคน"
+                      className={`${inputCls} disabled:opacity-40`}
+                      value={Number.isFinite(s.electricityPerPlayer) ? s.electricityPerPlayer : ""}
+                      onChange={(e) => setSetting("electricityPerPlayer", e.target.valueAsNumber)}
+                    />
+                  </div>
+                  <span className="w-5 shrink-0" />
                 </div>
                 <ul className="mt-1 space-y-1.5">
                   {opItems.map((item) => (
